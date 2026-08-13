@@ -1489,15 +1489,19 @@ function playHeroReveals(){
   // Mobile/touch: there's no hovering cursor on a touchscreen, so the
   // effect instead reveals as the visitor drags a finger across the hero —
   // these listeners stay passive so normal page scrolling is unaffected.
-  wrap.addEventListener('touchstart', (e)=>{
+  // Attached to window (not just the background layer) so a touch anywhere
+  // over the hero — including on top of the headline, buttons, etc. — still
+  // registers, the same way the desktop mouse version works regardless of
+  // what it's hovering over.
+  window.addEventListener('touchstart', (e)=>{
     const t = e.touches[0];
     if(t) handlePoint(t.clientX, t.clientY);
   }, { passive:true });
-  wrap.addEventListener('touchmove', (e)=>{
+  window.addEventListener('touchmove', (e)=>{
     const t = e.touches[0];
     if(t) handlePoint(t.clientX, t.clientY);
   }, { passive:true });
-  wrap.addEventListener('touchend', ()=>{ last = null; }, { passive:true });
+  window.addEventListener('touchend', ()=>{ last = null; }, { passive:true });
 
   function tick(){
     if(points.length===0){ idle++; if(idle>120){ requestAnimationFrame(tick); return; } }
