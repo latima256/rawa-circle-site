@@ -406,8 +406,8 @@
   .lineup-hint{font-size:.72rem; color:rgba(245,244,240,0.4); text-align:center; margin-top:-1rem; margin-bottom:1.6rem;}
   @media (min-width:640px){ .lineup-hint{display:none;} }
 
-  .lc{display:flex; flex-direction:column; overflow:hidden; border-radius:1.75rem; background:var(--paper); color:var(--ink); padding:1.3rem; transition:transform .4s cubic-bezier(.22,1,.36,1);}
-  .lc:hover{transform:translateY(-6px);}
+  .lc{display:flex; flex-direction:column; overflow:hidden; border-radius:1.75rem; background:var(--paper); color:var(--ink); padding:1.3rem; transition:transform .3s cubic-bezier(.22,1,.36,1), opacity .3s ease, filter .15s ease; will-change:transform, opacity, filter; transform:scale(var(--ss-scale, 1));}
+  .lc:hover{transform:scale(var(--ss-scale, 1)) translateY(-6px);}
   .lc-meta{display:flex; justify-content:space-between; align-items:flex-start; font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:rgba(10,10,10,0.5); margin-bottom:1rem;}
   .lc-badge{width:2.3rem; height:2.3rem; display:grid; place-items:center; border-radius:50%; background:rgba(10,10,10,0.08); transition:transform .3s cubic-bezier(.2,.8,.2,1); flex-shrink:0;}
   .lc:hover .lc-badge{transform:rotate(45deg) scale(1.08);}
@@ -2280,6 +2280,52 @@ function addToCart(btn){
   }
   prevBtn.addEventListener('click', ()=> scrollByCard(-1));
   nextBtn.addEventListener('click', ()=> scrollByCard(1));
+})();
+
+/* ---- Shop section "slipstream" effect ----
+   As the shelf slides, cards nearer the center sit sharp, full-size and
+   fully opaque; cards drifting toward the edges shrink, fade, and pick up
+   a touch of motion blur proportional to how fast you're scrolling —
+   settling back to sharp the instant the scroll stops. */
+(function(){
+  const track = document.getElementById('lineupGrid');
+  if(!track) return;
+  const cards = Array.from(track.querySelectorAll('.lc'));
+  if(!cards.length) return;
+
+  let lastScrollLeft = track.scrollLeft;
+  let velocity = 0;
+  let rafPending = false;
+  let settleTimer = null;
+
+  function updateCards(){
+    rafPending = false;
+    const trackRect = track.getBoundingClientRect();
+    const centerX = trackRect.left + trackRect.width / 2;
+    const blurAmount = Math.min(Math.abs(velocity) * 0.035, 6);
+
+    cards.forEach(card=>{
+      const r = card.getBoundingClientRect();
+      const cardCenter = r.left + r.width / 2;
+      const dist = Math.abs(cardCenter - centerX);
+      const norm = Math.min(dist / (trackRect.width / 2 + r.width / 2), 1);
+      const scale = 1 - norm * 0.1;
+      const opacity = 1 - norm * 0.4;
+      card.style.setProperty('--ss-scale', scale.toFixed(3));
+      card.style.opacity = opacity.toFixed(3);
+      card.style.filter = blurAmount > 0.3 ? `blur(${blurAmount.toFixed(1)}px)` : 'none';
+    });
+  }
+
+  track.addEventListener('scroll', ()=>{
+    velocity = track.scrollLeft - lastScrollLeft;
+    lastScrollLeft = track.scrollLeft;
+    if(!rafPending){ rafPending = true; requestAnimationFrame(updateCards); }
+    clearTimeout(settleTimer);
+    settleTimer = setTimeout(()=>{ velocity = 0; requestAnimationFrame(updateCards); }, 100);
+  }, { passive:true });
+
+  requestAnimationFrame(updateCards); // initial state on load
 })();
 
 document.querySelectorAll('.add-cart').forEach(btn=>{
