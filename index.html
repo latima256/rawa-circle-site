@@ -1466,10 +1466,10 @@ function playHeroReveals(){
     ctx.drawImage(brush, x-c, y-c);
   }
 
-  window.addEventListener('pointermove', (e)=>{
+  function handlePoint(clientX, clientY){
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * dpr;
-    const y = (e.clientY - rect.top) * dpr;
+    const x = (clientX - rect.left) * dpr;
+    const y = (clientY - rect.top) * dpr;
     const r = radius();
     if(x < -r || y < -r || x > cw+r || y > ch+r){ last=null; return; }
     if(last){
@@ -1481,7 +1481,23 @@ function playHeroReveals(){
       points.push({x,y});
     }
     last = {x,y};
+  }
+
+  // Desktop: reacts to the mouse simply hovering/moving
+  window.addEventListener('pointermove', (e)=> handlePoint(e.clientX, e.clientY), { passive:true });
+
+  // Mobile/touch: there's no hovering cursor on a touchscreen, so the
+  // effect instead reveals as the visitor drags a finger across the hero —
+  // these listeners stay passive so normal page scrolling is unaffected.
+  wrap.addEventListener('touchstart', (e)=>{
+    const t = e.touches[0];
+    if(t) handlePoint(t.clientX, t.clientY);
   }, { passive:true });
+  wrap.addEventListener('touchmove', (e)=>{
+    const t = e.touches[0];
+    if(t) handlePoint(t.clientX, t.clientY);
+  }, { passive:true });
+  wrap.addEventListener('touchend', ()=>{ last = null; }, { passive:true });
 
   function tick(){
     if(points.length===0){ idle++; if(idle>120){ requestAnimationFrame(tick); return; } }
