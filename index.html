@@ -226,6 +226,8 @@
   .acc-close{position:absolute; right:1rem; top:1rem; width:2.1rem; height:2.1rem; display:grid; place-items:center; border-radius:50%; background:rgba(10,10,10,0.06); color:rgba(10,10,10,0.6); transition:background .3s;}
   .acc-close:hover{background:rgba(10,10,10,0.12);}
   .acc-close svg{width:.85rem; height:.85rem;}
+  .acc-promo-h{font-family:'Anton',sans-serif; text-transform:uppercase; font-size:1.4rem; line-height:1.2; text-align:center; margin:.2rem 0 1.2rem;}
+  .acc-promo-h .pct{color:var(--accent);}
   .acc-tabs{display:flex; gap:.5rem; margin-bottom:1.4rem; border-bottom:1px solid rgba(10,10,10,0.1);}
   .acc-tab{padding:.6rem 0; margin-right:1.2rem; font-size:.85rem; font-weight:600; color:rgba(10,10,10,0.4); border-bottom:2px solid transparent; transition:color .25s, border-color .25s;}
   .acc-tab.active{color:var(--ink); border-color:var(--accent);}
@@ -1182,23 +1184,24 @@
     <button class="acc-close" id="accCloseBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l16 16M20 4 4 20"/></svg></button>
 
     <div id="accLoggedOutView">
+      <h3 class="acc-promo-h">Sign up and get <span class="pct">20% OFF</span> your first order</h3>
       <div class="acc-tabs">
-        <button type="button" class="acc-tab active" id="tabLogin">Log In</button>
-        <button type="button" class="acc-tab" id="tabSignup">Sign Up</button>
+        <button type="button" class="acc-tab" id="tabLogin">Log In</button>
+        <button type="button" class="acc-tab active" id="tabSignup">Sign Up</button>
       </div>
 
-      <form class="acc-form" id="loginForm">
+      <form class="acc-form hide" id="loginForm">
         <div class="acc-field"><label>Email</label><input type="email" id="loginEmail" required autocomplete="email"></div>
         <div class="acc-field"><label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
         <div class="acc-status" id="loginStatus"></div>
         <button type="submit" class="acc-submit">Log In</button>
       </form>
 
-      <form class="acc-form hide" id="signupForm">
+      <form class="acc-form" id="signupForm">
         <div class="acc-field"><label>Email</label><input type="email" id="signupEmail" required autocomplete="email"></div>
         <div class="acc-field"><label>Password</label><input type="password" id="signupPassword" required autocomplete="new-password" minlength="6"></div>
         <div class="acc-status" id="signupStatus"></div>
-        <button type="submit" class="acc-submit">Create Account</button>
+        <button type="submit" class="acc-submit">Sign Up &amp; Get 20% Off</button>
         <p class="acc-note">Creating an account saves your details for faster checkout next time.</p>
       </form>
     </div>
@@ -1207,6 +1210,15 @@
       <div class="acc-avatar" id="accAvatar">R</div>
       <div class="acc-email" id="accEmailDisplay"></div>
       <button class="acc-logout" id="logoutBtn">Log Out</button>
+    </div>
+
+    <div class="acc-logged-view" id="accNoOrderView">
+      <div class="acc-avatar" id="accNoOrderAvatar">R</div>
+      <h3 class="acc-promo-h" style="margin-bottom:.2rem;">You're <span class="pct">20% OFF</span> away</h3>
+      <div class="acc-email" id="accNoOrderEmail"></div>
+      <p class="acc-note" style="text-align:center; margin-top:0;">You're signed in but haven't placed an order yet — 20% off is waiting on your first piece.</p>
+      <button class="acc-submit" id="accNoOrderShopBtn" style="width:auto; padding:.85rem 2rem;">Shop Now</button>
+      <button class="acc-logout" id="accNoOrderLogoutBtn">Log Out</button>
     </div>
 
     <div class="acc-logged-view" id="accWelcomeView">
@@ -2202,6 +2214,9 @@ const accEmailDisplay = document.getElementById('accEmailDisplay');
 const accAvatar = document.getElementById('accAvatar');
 const accWelcomeView = document.getElementById('accWelcomeView');
 const accWelcomeEmail = document.getElementById('accWelcomeEmail');
+const accNoOrderView = document.getElementById('accNoOrderView');
+const accNoOrderEmail = document.getElementById('accNoOrderEmail');
+const accNoOrderAvatar = document.getElementById('accNoOrderAvatar');
 
 function openAccountModal(){ accBackdrop.classList.add('open'); stopScroll(); }
 function closeAccountModal(){ accBackdrop.classList.remove('open'); startScroll(); }
@@ -2216,6 +2231,7 @@ function updateAccountUI(){
     accLoggedOutView.style.display = 'none';
     accLoggedInView.classList.add('show');
     accWelcomeView.classList.remove('show');
+    accNoOrderView.classList.remove('show');
     accEmailDisplay.textContent = currentUser.email;
     accAvatar.textContent = currentUser.email[0].toUpperCase();
     // convenience: prefill checkout email once logged in
@@ -2227,14 +2243,35 @@ function updateAccountUI(){
     accLoggedOutView.style.display = 'block';
     accLoggedInView.classList.remove('show');
     accWelcomeView.classList.remove('show');
+    accNoOrderView.classList.remove('show');
   }
 }
 
 function showWelcomeView(email){
   accLoggedOutView.style.display = 'none';
   accLoggedInView.classList.remove('show');
+  accNoOrderView.classList.remove('show');
   accWelcomeView.classList.add('show');
   accWelcomeEmail.textContent = email;
+  openAccountModal();
+}
+
+// Checks the customers/orders tables (same ones used at checkout) to see
+// whether this email has ever completed an order.
+async function hasCustomerOrdered(email){
+  const { data: cust } = await sb.from('customers').select('id').eq('email', email).maybeSingle();
+  if(!cust) return false;
+  const { data: ord } = await sb.from('orders').select('id').eq('customer_id', cust.id).limit(1);
+  return !!(ord && ord.length);
+}
+
+function showNoOrderView(email){
+  accLoggedOutView.style.display = 'none';
+  accLoggedInView.classList.remove('show');
+  accWelcomeView.classList.remove('show');
+  accNoOrderView.classList.add('show');
+  accNoOrderEmail.textContent = email;
+  accNoOrderAvatar.textContent = email[0].toUpperCase();
   openAccountModal();
 }
 
@@ -2287,7 +2324,9 @@ loginForm.addEventListener('submit', async (e)=>{
   currentUser = data.user;
   setAccStatus('loginStatus', '', '');
   updateAccountUI();
-  setTimeout(closeAccountModal, 400);
+  const ordered = await hasCustomerOrdered(currentUser.email);
+  if(ordered){ setTimeout(closeAccountModal, 400); }
+  else { showNoOrderView(currentUser.email); }
 });
 
 signupForm.addEventListener('submit', async (e)=>{
@@ -2304,7 +2343,8 @@ signupForm.addEventListener('submit', async (e)=>{
   currentUser = data.user;
   setAccStatus('signupStatus', '', '');
   updateAccountUI();
-  setTimeout(closeAccountModal, 400);
+  // Brand-new account — definitely no orders yet, so no need to check.
+  showNoOrderView(currentUser.email);
 });
 
 document.getElementById('logoutBtn').addEventListener('click', async ()=>{
@@ -2313,7 +2353,33 @@ document.getElementById('logoutBtn').addEventListener('click', async ()=>{
   updateAccountUI();
 });
 
+document.getElementById('accNoOrderLogoutBtn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  currentUser = null;
+  updateAccountUI();
+});
+
+document.getElementById('accNoOrderShopBtn').addEventListener('click', ()=>{
+  closeAccountModal();
+  const shopSection = document.getElementById('shop');
+  if(shopSection) shopSection.scrollIntoView({ behavior:'smooth' });
+});
+
 updateAccountUI();
+
+// ---- Auto-popup: nudge visitors toward the 20% first-order discount ----
+// Shows once per browser session (reappears on the next visit) to:
+//  a) anyone browsing without an account (signed-out), and
+//  b) anyone who signs in mid-session but hasn't completed an order yet
+//     (handled directly in the login/signup handlers above).
+const PROMO_SESSION_KEY = 'rc_promo_shown';
+setTimeout(()=>{
+  if(cameFromEmailConfirmation) return;   // welcome view already covers this landing
+  if(currentUser) return;                 // logged in this session already handled above
+  if(sessionStorage.getItem(PROMO_SESSION_KEY)) return;
+  sessionStorage.setItem(PROMO_SESSION_KEY, '1');
+  if(!accBackdrop.classList.contains('open')) openAccountModal();
+}, 4000);
 
 const cartBtn = document.getElementById('cartBtn');
 const cartOverlay = document.getElementById('cartOverlay');
