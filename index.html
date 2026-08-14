@@ -228,6 +228,11 @@
   .acc-close svg{width:.85rem; height:.85rem;}
   .acc-promo-h{font-family:'Anton',sans-serif; text-transform:uppercase; font-size:1.4rem; line-height:1.2; text-align:center; margin:.2rem 0 1.2rem;}
   .acc-promo-h .pct{color:var(--accent);}
+  .acc-link-row{display:flex; justify-content:flex-end; margin-top:-.4rem;}
+  .acc-link{background:none; border:none; padding:0; font-size:.72rem; font-weight:600; color:rgba(10,10,10,0.55); text-decoration:underline; cursor:pointer;}
+  .acc-link:hover{color:var(--ink);}
+  .acc-back-link{align-self:flex-start; font-size:.72rem; font-weight:600; color:rgba(10,10,10,0.55); text-decoration:underline; background:none; border:none; padding:0; cursor:pointer; margin-bottom:.3rem;}
+  .acc-back-link:hover{color:var(--ink);}
   .acc-tabs{display:flex; gap:.5rem; margin-bottom:1.4rem; border-bottom:1px solid rgba(10,10,10,0.1);}
   .acc-tab{padding:.6rem 0; margin-right:1.2rem; font-size:.85rem; font-weight:600; color:rgba(10,10,10,0.4); border-bottom:2px solid transparent; transition:color .25s, border-color .25s;}
   .acc-tab.active{color:var(--ink); border-color:var(--accent);}
@@ -1193,8 +1198,17 @@
       <form class="acc-form hide" id="loginForm">
         <div class="acc-field"><label>Email</label><input type="email" id="loginEmail" required autocomplete="email"></div>
         <div class="acc-field"><label>Password</label><input type="password" id="loginPassword" required autocomplete="current-password"></div>
+        <div class="acc-link-row"><button type="button" class="acc-link" id="forgotPasswordLink">Forgot password?</button></div>
         <div class="acc-status" id="loginStatus"></div>
         <button type="submit" class="acc-submit">Log In</button>
+      </form>
+
+      <form class="acc-form hide" id="forgotForm">
+        <button type="button" class="acc-back-link" id="backToLoginFromForgot">&larr; Back to log in</button>
+        <p class="acc-note" style="margin-top:0;">Enter your account email and we'll send you a link to reset your password.</p>
+        <div class="acc-field"><label>Email</label><input type="email" id="forgotEmail" required autocomplete="email"></div>
+        <div class="acc-status" id="forgotStatus"></div>
+        <button type="submit" class="acc-submit">Send Reset Link</button>
       </form>
 
       <form class="acc-form" id="signupForm">
@@ -1203,6 +1217,16 @@
         <div class="acc-status" id="signupStatus"></div>
         <button type="submit" class="acc-submit">Sign Up &amp; Get 20% Off</button>
         <p class="acc-note">Creating an account saves your details for faster checkout next time.</p>
+      </form>
+    </div>
+
+    <div class="acc-logged-view" id="accResetPasswordView">
+      <div class="acc-avatar" id="accResetAvatar">R</div>
+      <h3 class="acc-welcome-h" style="font-size:1.15rem;">Set a new password</h3>
+      <form class="acc-form" id="resetPasswordForm" style="width:100%;">
+        <div class="acc-field"><label>New Password</label><input type="password" id="newPassword" required autocomplete="new-password" minlength="6"></div>
+        <div class="acc-status" id="resetPasswordStatus"></div>
+        <button type="submit" class="acc-submit">Save New Password</button>
       </form>
     </div>
 
@@ -2195,6 +2219,8 @@ const SUPABASE_KEY = "sb_publishable_nZ4xHMbsSmdlWFY_slAdDQ_K1q-KTgk";
 // can tell "just clicked email confirmation link" apart from a normal visit.
 const cameFromEmailConfirmation =
   window.location.hash.includes('type=signup') || window.location.search.includes('type=signup');
+const cameFromPasswordRecovery =
+  window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery');
 // Session is kept in memory only (not saved to browser storage), so
 // logging in stays active while this tab is open, but a full page
 // reload will require logging in again.
@@ -2217,6 +2243,7 @@ const accWelcomeEmail = document.getElementById('accWelcomeEmail');
 const accNoOrderView = document.getElementById('accNoOrderView');
 const accNoOrderEmail = document.getElementById('accNoOrderEmail');
 const accNoOrderAvatar = document.getElementById('accNoOrderAvatar');
+const accResetPasswordView = document.getElementById('accResetPasswordView');
 
 function openAccountModal(){ accBackdrop.classList.add('open'); stopScroll(); }
 function closeAccountModal(){ accBackdrop.classList.remove('open'); startScroll(); }
@@ -2232,6 +2259,7 @@ function updateAccountUI(){
     accLoggedInView.classList.add('show');
     accWelcomeView.classList.remove('show');
     accNoOrderView.classList.remove('show');
+    accResetPasswordView.classList.remove('show');
     accEmailDisplay.textContent = currentUser.email;
     accAvatar.textContent = currentUser.email[0].toUpperCase();
     // convenience: prefill checkout email once logged in
@@ -2244,6 +2272,7 @@ function updateAccountUI(){
     accLoggedInView.classList.remove('show');
     accWelcomeView.classList.remove('show');
     accNoOrderView.classList.remove('show');
+    accResetPasswordView.classList.remove('show');
   }
 }
 
@@ -2251,6 +2280,7 @@ function showWelcomeView(email){
   accLoggedOutView.style.display = 'none';
   accLoggedInView.classList.remove('show');
   accNoOrderView.classList.remove('show');
+  accResetPasswordView.classList.remove('show');
   accWelcomeView.classList.add('show');
   accWelcomeEmail.textContent = email;
   openAccountModal();
@@ -2269,9 +2299,19 @@ function showNoOrderView(email){
   accLoggedOutView.style.display = 'none';
   accLoggedInView.classList.remove('show');
   accWelcomeView.classList.remove('show');
+  accResetPasswordView.classList.remove('show');
   accNoOrderView.classList.add('show');
   accNoOrderEmail.textContent = email;
   accNoOrderAvatar.textContent = email[0].toUpperCase();
+  openAccountModal();
+}
+
+function showResetPasswordView(){
+  accLoggedOutView.style.display = 'none';
+  accLoggedInView.classList.remove('show');
+  accWelcomeView.classList.remove('show');
+  accNoOrderView.classList.remove('show');
+  accResetPasswordView.classList.add('show');
   openAccountModal();
 }
 
@@ -2283,11 +2323,22 @@ document.getElementById('welcomeContinueBtn').addEventListener('click', ()=>{
 // Fires when a session is detected — including the moment someone lands
 // here right after clicking their email confirmation link.
 sb.auth.onAuthStateChange((event, session)=>{
+  if(event === 'PASSWORD_RECOVERY' && session){
+    // Someone clicked the "reset your password" link from their email.
+    currentUser = session.user;
+    showResetPasswordView();
+    history.replaceState(null, '', window.location.pathname);
+    return;
+  }
   if(event === 'SIGNED_IN' && session){
     currentUser = session.user;
     if(cameFromEmailConfirmation){
       showWelcomeView(session.user.email);
       // clean the confirmation tokens out of the visible URL
+      history.replaceState(null, '', window.location.pathname);
+    } else if(cameFromPasswordRecovery){
+      // Some browsers fire SIGNED_IN instead of/alongside PASSWORD_RECOVERY.
+      showResetPasswordView();
       history.replaceState(null, '', window.location.pathname);
     } else {
       updateAccountUI();
@@ -2300,13 +2351,47 @@ const tabLogin = document.getElementById('tabLogin');
 const tabSignup = document.getElementById('tabSignup');
 const loginForm = document.getElementById('loginForm');
 const signupForm = document.getElementById('signupForm');
+const forgotForm = document.getElementById('forgotForm');
 tabLogin.addEventListener('click', ()=>{
   tabLogin.classList.add('active'); tabSignup.classList.remove('active');
-  loginForm.classList.remove('hide'); signupForm.classList.add('hide');
+  loginForm.classList.remove('hide'); signupForm.classList.add('hide'); forgotForm.classList.add('hide');
 });
 tabSignup.addEventListener('click', ()=>{
   tabSignup.classList.add('active'); tabLogin.classList.remove('active');
-  signupForm.classList.remove('hide'); loginForm.classList.add('hide');
+  signupForm.classList.remove('hide'); loginForm.classList.add('hide'); forgotForm.classList.add('hide');
+});
+
+// Forgot password: request a reset email
+document.getElementById('forgotPasswordLink').addEventListener('click', ()=>{
+  loginForm.classList.add('hide');
+  forgotForm.classList.remove('hide');
+});
+document.getElementById('backToLoginFromForgot').addEventListener('click', ()=>{
+  forgotForm.classList.add('hide');
+  loginForm.classList.remove('hide');
+});
+document.getElementById('forgotForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const email = document.getElementById('forgotEmail').value.trim();
+  setAccStatus('forgotStatus', 'Sending…');
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + window.location.pathname
+  });
+  if(error){ setAccStatus('forgotStatus', error.message, 'error'); return; }
+  setAccStatus('forgotStatus', 'If an account exists for that email, a reset link is on its way — check your inbox (and spam folder).', 'ok');
+});
+
+// Setting a new password after clicking the reset link from email
+document.getElementById('resetPasswordForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const newPassword = document.getElementById('newPassword').value;
+  setAccStatus('resetPasswordStatus', 'Saving…');
+  const { data, error } = await sb.auth.updateUser({ password: newPassword });
+  if(error){ setAccStatus('resetPasswordStatus', error.message, 'error'); return; }
+  currentUser = data.user;
+  setAccStatus('resetPasswordStatus', '', '');
+  updateAccountUI();
+  setTimeout(closeAccountModal, 400);
 });
 
 function setAccStatus(id, msg, type){
