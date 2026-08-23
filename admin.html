@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Raw Circle — Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --ink:#0a0a0a;
+    --paper:#f5f4f0;
+    --panel:#ffffff;
+    --line:rgba(10,10,10,0.12);
+    --muted:rgba(10,10,10,0.55);
+    --accent:#c9895a;
+    --danger:#b6432f;
+    --ok:#3f7a4f;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:14.5px;
+    line-height:1.5;
+  }
+  a{ color:inherit; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:0 20px 80px; }
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 0; border-bottom:1px solid var(--line); margin-bottom:28px;
+  }
+  header.top .brand{ font-weight:800; letter-spacing:.02em; text-transform:uppercase; font-size:14px; }
+  header.top .brand span{ color:var(--accent); }
+  header.top .who{ display:flex; align-items:center; gap:14px; font-size:13px; color:var(--muted); }
+  .btn{
+    appearance:none; border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+    padding:9px 16px; border-radius:999px; font-size:12.5px; font-weight:600; letter-spacing:.03em;
+    cursor:pointer; transition:opacity .2s ease;
+  }
+  .btn:hover{ opacity:.82; }
+  .btn.ghost{ background:transparent; color:var(--ink); }
+  .btn.danger{ background:var(--danger); border-color:var(--danger); color:#fff; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn.small{ padding:6px 12px; font-size:11.5px; }
+
+  /* ---- Login ---- */
+  .login-shell{ max-width:380px; margin:80px auto; }
+  .login-shell h1{ font-size:22px; margin:0 0 6px; }
+  .login-shell p.sub{ color:var(--muted); margin:0 0 28px; font-size:13.5px; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+  .field input, .field textarea, .field select{
+    width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:8px;
+    background:var(--panel); color:var(--ink); font-size:14px; font-family:inherit;
+  }
+  .field textarea{ resize:vertical; min-height:60px; }
+  .status-msg{ font-size:13px; margin-top:12px; min-height:18px; }
+  .status-msg.err{ color:var(--danger); }
+  .status-msg.ok{ color:var(--ok); }
+
+  .hidden{ display:none !important; }
+
+  /* ---- Tabs ---- */
+  .tabs{ display:flex; gap:8px; margin-bottom:26px; border-bottom:1px solid var(--line); }
+  .tab{
+    padding:10px 4px; margin-bottom:-1px; border-bottom:2px solid transparent;
+    font-size:13px; font-weight:600; color:var(--muted); cursor:pointer; background:none; border-top:none; border-left:none; border-right:none;
+  }
+  .tab.active{ color:var(--ink); border-bottom-color:var(--accent); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+
+  /* ---- Products ---- */
+  .product-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px; margin-bottom:16px; display:grid; grid-template-columns:110px 1fr; gap:18px;
+  }
+  .product-card.new{ border-style:dashed; }
+  .product-photo{
+    width:110px; height:110px; border-radius:8px; overflow:hidden; background:var(--paper);
+    display:flex; align-items:center; justify-content:center; position:relative;
+  }
+  .product-photo img{ width:100%; height:100%; object-fit:cover; }
+  .product-photo .upload-lbl{
+    position:absolute; inset:auto 0 0 0; background:rgba(10,10,10,0.7); color:#fff;
+    font-size:10px; text-align:center; padding:4px 0; cursor:pointer; letter-spacing:.04em; text-transform:uppercase;
+  }
+  .product-photo input[type=file]{ display:none; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .row-actions{ display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap; }
+  .row-actions .save-status{ font-size:12px; color:var(--muted); }
+  .toggle-row{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); }
+  .toggle-row input{ width:auto; }
+
+  /* ---- Site copy ---- */
+  .content-section{ margin-bottom:30px; }
+  .content-section h3{ font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:0 0 12px; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .content-field{ margin-bottom:12px; }
+  .content-field label{ display:block; font-size:11.5px; color:var(--muted); margin-bottom:5px; font-family:ui-monospace,monospace; }
+  .save-bar{
+    position:sticky; bottom:0; background:var(--paper); border-top:1px solid var(--line);
+    padding:14px 0; margin-top:10px; display:flex; align-items:center; gap:14px;
+  }
+
+  .empty-note{ color:var(--muted); font-size:13.5px; padding:20px 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">Raw Circle <span>/ Admin</span></div>
+    <div class="who" id="whoRow"></div>
+  </header>
+
+  <!-- ---------------- LOGIN ---------------- -->
+  <div id="loginView" class="login-shell">
+    <h1>Sign in</h1>
+    <p class="sub">Use the same account you'd sign up with on the storefront. Only accounts granted admin access can get past this screen.</p>
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn" style="width:100%;">Sign In</button>
+      <div class="status-msg" id="loginStatus"></div>
+    </form>
+  </div>
+
+  <!-- ---------------- NOT AUTHORIZED ---------------- -->
+  <div id="notAuthView" class="login-shell hidden">
+    <h1>Not authorized</h1>
+    <p class="sub">This account is signed in but hasn't been granted admin access. If this should be you, run the admin-grant statement in <code>supabase/admin-setup.sql</code> with this account's email, then reload.</p>
+    <button class="btn ghost" id="notAuthSignOut">Sign out</button>
+  </div>
+
+  <!-- ---------------- DASHBOARD ---------------- -->
+  <div id="dashView" class="hidden">
+    <div class="tabs">
+      <button class="tab active" data-tab="products">Products</button>
+      <button class="tab" data-tab="content">Site Copy</button>
+    </div>
+
+    <!-- Products tab -->
+    <div class="tab-panel active" id="tab-products">
+      <div id="productsList"></div>
+      <button class="btn ghost" id="addProductBtn">+ Add product</button>
+    </div>
+
+    <!-- Site copy tab -->
+    <div class="tab-panel" id="tab-content">
+      <div id="contentSections"></div>
+      <div class="save-bar">
+        <button class="btn" id="saveContentBtn">Save all copy changes</button>
+        <span class="status-msg" id="contentStatus"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script type="module">
+const SUPABASE_URL = "https://ygcohbrhcdmoksjamstl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_nZ4xHMbsSmdlWFY_slAdDQ_K1q-KTgk";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
+
+const loginView = document.getElementById('loginView');
+const notAuthView = document.getElementById('notAuthView');
+const dashView = document.getElementById('dashView');
+const whoRow = document.getElementById('whoRow');
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showOnly(view){
+  [loginView, notAuthView, dashView].forEach(v=> v.classList.add('hidden'));
+  view.classList.remove('hidden');
+}
+
+/* ---------------- AUTH ---------------- */
+document.getElementById('loginForm').addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const statusEl = document.getElementById('loginStatus');
+  statusEl.className = 'status-msg'; statusEl.textContent = 'Signing in…';
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = error.message || 'Could not sign in.';
+    return;
+  }
+  statusEl.textContent = '';
+  await checkAuthAndRoute();
+});
+
+document.getElementById('notAuthSignOut').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  showOnly(loginView);
+});
+
+async function signOut(){
+  await sb.auth.signOut();
+  whoRow.innerHTML = '';
+  showOnly(loginView);
+}
+
+async function checkAuthAndRoute(){
+  const { data: { user } } = await sb.auth.getUser();
+  if(!user){ showOnly(loginView); return; }
+
+  const { data: isAdmin, error } = await sb.rpc('is_admin');
+  if(error || !isAdmin){
+    showOnly(notAuthView);
+    return;
+  }
+
+  whoRow.innerHTML = `<span>${escapeHtml(user.email)}</span>`;
+  const signOutBtn = document.createElement('button');
+  signOutBtn.className = 'btn ghost small';
+  signOutBtn.textContent = 'Sign out';
+  signOutBtn.addEventListener('click', signOut);
+  whoRow.appendChild(signOutBtn);
+
+  showOnly(dashView);
+  loadProducts();
+  loadContent();
+}
+
+/* ---------------- TABS ---------------- */
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(t=> t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=> p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+/* ---------------- PRODUCTS ---------------- */
+const productsList = document.getElementById('productsList');
+
+function productCardTemplate(p){
+  const isNew = !p.id;
+  const tagsStr = (p.tags || []).join(', ');
+  return `
+  <div class="product-card ${isNew ? 'new' : ''}" data-id="${p.id || ''}">
+    <div class="product-photo">
+      <img src="${escapeHtml(p.image_url || '')}" alt="" onerror="this.style.opacity=0">
+      <label class="upload-lbl">Change<input type="file" accept="image/*" class="img-input"></label>
+    </div>
+    <div>
+      <div class="grid2">
+        <div class="field"><label>Name</label><input type="text" class="f-name" value="${escapeHtml(p.name || '')}"></div>
+        <div class="field"><label>Price (AED)</label><input type="number" step="1" min="0" class="f-price" value="${p.price_aed ?? ''}"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Badge (e.g. "01 — Tee")</label><input type="text" class="f-badge" value="${escapeHtml(p.badge || '')}"></div>
+        <div class="field"><label>Tags (comma separated)</label><input type="text" class="f-tags" value="${escapeHtml(tagsStr)}"></div>
+      </div>
+      <div class="field"><label>Description</label><textarea class="f-desc">${escapeHtml(p.description || '')}</textarea></div>
+      <div class="row-actions">
+        <label class="toggle-row"><input type="checkbox" class="f-active" ${p.active !== false ? 'checked' : ''}> Active (visible on site)</label>
+        <label class="toggle-row">Sort <input type="number" class="f-sort" value="${p.sort_order ?? 0}" style="width:56px; padding:4px 6px;"></label>
+        <button class="btn small save-product">${isNew ? 'Create' : 'Save'}</button>
+        ${!isNew ? '<button class="btn small danger delete-product">Delete</button>' : ''}
+        <span class="save-status"></span>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadProducts(){
+  productsList.innerHTML = '<div class="empty-note">Loading…</div>';
+  const { data, error } = await sb.from('products').select('*').order('sort_order', { ascending: true });
+  if(error){
+    productsList.innerHTML = `<div class="empty-note">Couldn't load products: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  productsList.innerHTML = (data || []).map(productCardTemplate).join('');
+  productsList.querySelectorAll('.product-card').forEach(wireProductCard);
+}
+
+function readProductForm(card){
+  const tags = card.querySelector('.f-tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+  return {
+    name: card.querySelector('.f-name').value.trim(),
+    price_aed: parseFloat(card.querySelector('.f-price').value) || 0,
+    badge: card.querySelector('.f-badge').value.trim(),
+    tags,
+    description: card.querySelector('.f-desc').value.trim(),
+    active: card.querySelector('.f-active').checked,
+    sort_order: parseInt(card.querySelector('.f-sort').value, 10) || 0,
+  };
+}
+
+function wireProductCard(card){
+  const statusEl = card.querySelector('.save-status');
+  const imgInput = card.querySelector('.img-input');
+  const imgEl = card.querySelector('.product-photo img');
+
+  imgInput.addEventListener('change', async ()=>{
+    const file = imgInput.files[0];
+    if(!file) return;
+    statusEl.textContent = 'Uploading image…';
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const { error: upErr } = await sb.storage.from('product-images').upload(path, file, { upsert: false });
+    if(upErr){
+      statusEl.textContent = 'Image upload failed: ' + upErr.message;
+      return;
+    }
+    const { data: pub } = sb.storage.from('product-images').getPublicUrl(path);
+    const publicUrl = pub.publicUrl;
+    imgEl.src = publicUrl;
+    imgEl.style.opacity = 1;
+
+    const id = card.dataset.id;
+    if(id){
+      const { error: updErr } = await sb.from('products').update({ image_url: publicUrl }).eq('id', id);
+      statusEl.textContent = updErr ? ('Saved image, but: ' + updErr.message) : 'Image updated.';
+    } else {
+      card.dataset.pendingImage = publicUrl;
+      statusEl.textContent = 'Image ready — click Create to save this product.';
+    }
+  });
+
+  card.querySelector('.save-product').addEventListener('click', async ()=>{
+    const form = readProductForm(card);
+    const id = card.dataset.id;
+    statusEl.textContent = 'Saving…';
+    if(id){
+      const { error } = await sb.from('products').update(form).eq('id', id);
+      statusEl.textContent = error ? ('Error: ' + error.message) : 'Saved ✓';
+    } else {
+      if(card.dataset.pendingImage) form.image_url = card.dataset.pendingImage;
+      const { error } = await sb.from('products').insert(form);
+      if(error){ statusEl.textContent = 'Error: ' + error.message; return; }
+      statusEl.textContent = 'Created ✓';
+      loadProducts();
+    }
+  });
+
+  const delBtn = card.querySelector('.delete-product');
+  if(delBtn){
+    delBtn.addEventListener('click', async ()=>{
+      if(!confirm('Delete this product? This cannot be undone.')) return;
+      const id = card.dataset.id;
+      const { error } = await sb.from('products').delete().eq('id', id);
+      if(error){ statusEl.textContent = 'Error: ' + error.message; return; }
+      card.remove();
+    });
+  }
+}
+
+document.getElementById('addProductBtn').addEventListener('click', ()=>{
+  const div = document.createElement('div');
+  div.innerHTML = productCardTemplate({});
+  const card = div.firstElementChild;
+  productsList.appendChild(card);
+  wireProductCard(card);
+});
+
+/* ---------------- SITE COPY ---------------- */
+const CONTENT_SECTIONS = [
+  { label: 'Hero', prefix: 'hero_' },
+  { label: 'About', prefix: 'about_' },
+  { label: 'Why Raw Circle', prefix: 'why_' },
+  { label: 'Stats', prefix: 'stats_' },
+  { label: 'Footer', prefix: 'footer_' },
+];
+// stat_1_num etc. don't share the "stats_" prefix pattern exactly — group explicitly
+function sectionFor(key){
+  if(key.startsWith('stat_') || key === 'stats_h2') return 'Stats';
+  if(key.startsWith('hero_')) return 'Hero';
+  if(key.startsWith('about_')) return 'About';
+  if(key.startsWith('why_')) return 'Why Raw Circle';
+  if(key.startsWith('footer_')) return 'Footer';
+  return 'Other';
+}
+
+let contentRows = [];
+
+async function loadContent(){
+  const contentSections = document.getElementById('contentSections');
+  contentSections.innerHTML = '<div class="empty-note">Loading…</div>';
+  const { data, error } = await sb.from('site_content').select('*').order('key', { ascending: true });
+  if(error){
+    contentSections.innerHTML = `<div class="empty-note">Couldn't load site copy: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+  contentRows = data || [];
+  const grouped = {};
+  contentRows.forEach(row=>{
+    const sec = sectionFor(row.key);
+    (grouped[sec] = grouped[sec] || []).push(row);
+  });
+
+  const order = ['Hero','About','Why Raw Circle','Stats','Footer','Other'];
+  contentSections.innerHTML = order.filter(s=>grouped[s]).map(sec=>{
+    const fields = grouped[sec].map(row=>{
+      const long = (row.value || '').length > 60;
+      const inputHtml = long
+        ? `<textarea class="cc-field" data-key="${escapeHtml(row.key)}">${escapeHtml(row.value)}</textarea>`
+        : `<input type="text" class="cc-field" data-key="${escapeHtml(row.key)}" value="${escapeHtml(row.value)}">`;
+      return `<div class="content-field"><label>${escapeHtml(row.key)}</label>${inputHtml}</div>`;
+    }).join('');
+    return `<div class="content-section"><h3>${escapeHtml(sec)}</h3>${fields}</div>`;
+  }).join('');
+}
+
+document.getElementById('saveContentBtn').addEventListener('click', async ()=>{
+  const statusEl = document.getElementById('contentStatus');
+  statusEl.className = 'status-msg'; statusEl.textContent = 'Saving…';
+  const fields = Array.from(document.querySelectorAll('.cc-field'));
+  const updates = fields.map(el => ({ key: el.dataset.key, value: el.value }));
+  const { error } = await sb.from('site_content').upsert(updates, { onConflict: 'key' });
+  if(error){
+    statusEl.className = 'status-msg err';
+    statusEl.textContent = 'Error: ' + error.message;
+    return;
+  }
+  statusEl.className = 'status-msg ok';
+  statusEl.textContent = 'All copy changes saved ✓';
+});
+
+/* ---------------- BOOT ---------------- */
+checkAuthAndRoute();
+</script>
+</body>
+</html>
